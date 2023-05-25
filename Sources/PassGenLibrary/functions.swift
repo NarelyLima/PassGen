@@ -26,33 +26,61 @@ func randomString(length: Int) -> String {
 }
 
 
-func createFile(){
-    let filePath = NSHomeDirectory() + "/senhas.txt"
-    if fileVerify() == false {
-        (FileManager.default.createFile(atPath: filePath, contents: nil, attributes: nil))
-        if fileVerify() {
-            print("File created with success.")
-        } else {
-            print("The file dont`t created, retry.")
-        }
+func createFile(_ filePath: String, fileManager: FMProtocol) throws -> Bool {
+    if fileVerify(filePath) == false {
+        fileManager.createFile(atPath: filePath, contents: nil, attributes: nil)
+        return true
     } else {
-        print("Empty file")
+        throw CreateFileError.emptyFile
     }
 }
 
-func writeFile(pass_name: String, password: String){
-    let filePath = NSHomeDirectory() + "/senhas.txt"
+enum CreateFileError: Error, LocalizedError {
+    case emptyFile
+
+    public var errorDescription: String? {
+        switch self {
+        case .emptyFile:
+            return NSLocalizedString("File is empty", comment: "")
+        }
+    }
+}
+
+func writeFile(filePath: String,pass_name: String, password: String) -> Bool {
     do {
         let handle = try FileHandle(forWritingTo: URL(fileURLWithPath: filePath))
         handle.seekToEndOfFile()
         handle.write("\(pass_name)  ->  \(password)\n".data(using: .utf8)!)
         handle.closeFile()
+        return true
     } catch {
         print(error)
+        return false
     }
 }
 
-func fileVerify() -> Bool {
-    let filePath = NSHomeDirectory() + "/senhas.txt"
+func fileVerify(_ filePath: String) -> Bool {
+
     return FileManager.default.fileExists(atPath: filePath)
+}
+
+protocol FMProtocol {
+    func createFile(atPath: String, contents: Data?, attributes: [FileAttributeKey : Any]?) -> Bool
+}
+
+class FileManagerMock: FMProtocol {
+    static let shared = FileManagerMock()
+
+    private init() {
+
+    }
+    
+    func createFile(atPath: String, contents: Data?, attributes: [FileAttributeKey : Any]?) -> Bool {
+        return true
+    }
+
+}
+
+extension FileManager: FMProtocol {
+
 }

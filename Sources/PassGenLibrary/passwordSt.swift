@@ -19,9 +19,18 @@ enum SizeConstants: Int {
     case Max = 32
 }
 
-enum ValidationError: Error {
+enum ValidationError: Error, LocalizedError {
     case tooShort
     case tooLong
+
+    public var errorDescription: String? {
+        switch self {
+        case .tooShort:
+            return NSLocalizedString("\nThe password length cannot be less than 8", comment: "")
+        case .tooLong:
+            return NSLocalizedString("\nThe password length cannot be more than 32", comment: "")
+        }
+    }
 }
 
 public struct passwordSt: ParsableCommand {
@@ -35,19 +44,14 @@ public struct passwordSt: ParsableCommand {
     
     public init() { }
     
-    public func run() throws {
+    public func run() {
         var password = ""
         
-        while true{
+        while true {
             do {
                 try verifyError(size: size)
-            } catch ValidationError.tooShort{
-                print(error)
-                print("\nThe password length cannot be less than 8")
-                break
-            } catch ValidationError.tooLong {
-                print(error)
-                print("\nThe password length cannot be more than 32")
+            } catch {
+                print(error.localizedDescription)
                 break
             }
                 print(messag, terminator: "")
@@ -56,9 +60,17 @@ public struct passwordSt: ParsableCommand {
                 }
                 print("\n\nYour password \(pass_name) is \(password)", terminator: "")
                 print("\nYour password to \((Double(validadePassword(password: password))/4)*100)" + "% of force\n")
-                createFile()
-                writeFile(pass_name: pass_name, password: password)
+            do {
                 let filePath = NSHomeDirectory() + "/senhas.txt"
+                if try createFile(filePath, fileManager: FileManager.default) {
+                    print("File created with success.")
+                }
+            } catch {
+                print(error.localizedDescription)
+            }
+
+            let filePath = NSHomeDirectory() + "/senhas.txt"
+            writeFile(filePath: filePath, pass_name: pass_name, password: password)
                 do{
                     let testing = try String(contentsOf: URL(fileURLWithPath: filePath))
                     print(testing)
@@ -69,12 +81,13 @@ public struct passwordSt: ParsableCommand {
         }
     }
     
-    private func verifyError(size: Int) throws {
+    func verifyError(size: Int) throws -> Bool {
         if size < SizeConstants.Min.rawValue {
             throw ValidationError.tooShort
-            
         } else if size > SizeConstants.Max.rawValue {
             throw ValidationError.tooLong
+        } else {
+            return false
         }
     }
     
